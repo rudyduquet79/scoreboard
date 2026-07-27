@@ -62,6 +62,21 @@ function fmtValue(n, fmt) {
 function tableToGrid(table) {
   var rows = table.rows || [];
   var grid = [];
+
+  /* Ligne 0 : les libellés de colonnes construits par Google.
+     Le paramètre headers=0 n'est pas respecté en mode JSON : Google consomme
+     les lignes d'en-tête du Sheet et en concatène le texte dans ces libellés
+     (« MARKETING Publicités Facebook (Leads) »). On les place donc en tête de
+     la grille. Si Google respecte headers=0, les libellés sont vides et les
+     vraies lignes suivent — le repérage de « MÉTRIQUE » fonctionne dans les
+     deux cas.                                                              */
+  var cols = table.cols || [];
+  var labels = [];
+  for (var c = 0; c < cols.length; c++) {
+    labels.push(cols[c] && cols[c].label ? cols[c].label : "");
+  }
+  grid.push(labels);
+
   for (var i = 0; i < rows.length; i++) {
     var cells = (rows[i] && rows[i].c) || [];
     var line = [];
@@ -138,15 +153,30 @@ function extract(grid, board) {
 
   var headers = grid[hRow].map(norm);
 
+  /* Les libellés arrivent souvent préfixés de leur section
+     (« MARKETING Publicités Facebook (Leads) »), d'où la recherche en
+     trois passes, de la plus stricte à la plus permissive.              */
   function colOf(headerName) {
     if (!headerName) return -1;
     var target = norm(headerName);
+    if (!target) return -1;
+
+    // 1. correspondance exacte
     var idx = headers.indexOf(target);
     if (idx !== -1) return idx;
+
+    // 2. le libellé se termine par le nom cherché (cas du préfixe de section)
     for (var i = 0; i < headers.length; i++) {
       var h = headers[i];
-      if (h && (h.indexOf(target) !== -1 || target.indexOf(h) !== -1)) return i;
+      if (h && h.length > target.length &&
+          h.slice(h.length - target.length) === target) return i;
     }
+
+    // 3. le libellé contient le nom cherché
+    for (var j = 0; j < headers.length; j++) {
+      if (headers[j] && headers[j].indexOf(target) !== -1) return j;
+    }
+
     return -1;
   }
 
