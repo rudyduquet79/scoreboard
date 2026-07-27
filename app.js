@@ -1,36 +1,15 @@
 /* ============================================================
    TV Dashboard — logique
-   Lit le Google Sheet en direct via l'endpoint public gviz
+   Lit le Google Sheet en direct et calcule les métriques dérivées
    ============================================================ */
-
-/* ---------- Parseur CSV (gère guillemets et sauts de ligne) ---------- */
-function parseCSV(text) {
-  var rows = [], row = [], cell = "", inQ = false;
-
-  for (var i = 0; i < text.length; i++) {
-    var c = text.charAt(i);
-    if (inQ) {
-      if (c === '"') {
-        if (text.charAt(i + 1) === '"') { cell += '"'; i++; }
-        else inQ = false;
-      } else cell += c;
-    } else {
-      if (c === '"') inQ = true;
-      else if (c === ",") { row.push(cell); cell = ""; }
-      else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
-      else if (c === "\r") { /* ignore */ }
-      else cell += c;
-    }
-  }
-  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
-  return rows;
-}
 
 /* ---------- Normalisation de texte pour comparer les en-têtes ---------- */
 function norm(s) {
   if (s === null || s === undefined) return "";
   var out = String(s).replace(/\s+/g, " ").trim().toLowerCase();
   if (String.prototype.normalize) {
+    // ̀-ͯ = accents combinants, en échappement ASCII
+    // pour rester insensible à l'encodage du fichier servi
     out = out.normalize("NFD").replace(/[̀-ͯ]/g, "");
   }
   return out.replace(/[^a-z0-9%$ ]/g, "").replace(/\s+/g, " ").trim();
@@ -43,11 +22,10 @@ function toNum(raw) {
   if (!s) return null;
 
   var isPct = s.indexOf("%") !== -1;
-  s = s.replace(/[\s   ]/g, "")   // espaces, insécables, fines
+  s = s.replace(/[\s   ]/g, "")
        .replace(/[$€%]/g, "")
        .replace(/,/g, ".");
 
-  // "1.000.00" → on ne garde que le dernier point comme séparateur décimal
   var parts = s.split(".");
   if (parts.length > 2) {
     s = parts.slice(0, parts.length - 1).join("") + "." + parts[parts.length - 1];
@@ -58,71 +36,121 @@ function toNum(raw) {
   return { n: n, isPct: isPct };
 }
 
-/* ---------- Formatage pour l'affichage ---------- */
+/* ---------- Formatage ---------- */
 function nf(n) {
-  try { return n.toLocaleString("fr-CA"); }
-  catch (e) { return String(n); }
+  try { return n.toLocaleString("fr-CA"); } catch (e) { return String(n); }
 }
 
 function fmtValue(n, fmt) {
-  if (n === null) return "—";
+  if (n === null || n === undefined) return "—";
   if (fmt === "pct") {
-    var v = (n > 0 && n <= 1) ? n * 100 : n;
-    return (Math.round(v * 10) / 10) + " %";
+    // sous 10 %, deux décimales (2,59 %) ; au-delà, entier (23 %)
+    var r = Math.abs(n) < 10 ? Math.round(n * 100) / 100 : Math.round(n);
+    return nf(r) + " %";
   }
   if (fmt === "money") return "$" + nf(Math.round(n));
-  var r = (Math.abs(n) < 10 && n % 1 !== 0) ? Math.round(n * 10) / 10 : Math.round(n);
-  return nf(r);
+  var v = (Math.abs(n) < 10 && n % 1 !== 0) ? Math.round(n * 10) / 10 : Math.round(n);
+  return nf(v);
 }
 
-/* ---------- Récupération du Sheet ---------- */
+/* ---------- Récupération du Sheet ----------
+   JSONP plutôt que fetch : l'endpoint gviz de Google ne renvoie pas
+   d'en-tête Access-Control-Allow-Origin, donc un fetch depuis un autre
+   domaine échoue avec « Failed to fetch ». Une balise <script> n'est
+   pas soumise à cette restriction.                                     */
+
+function tableToGrid(table) {
+  var rows = table.rows || [];
+  var grid = [];
+  for (var i = 0; i < rows.length; i++) {
+    var cells = (rows[i] && rows[i].c) || [];
+    var line = [];
+    for (var j = 0; j < cells.length; j++) {
+      var cell = cells[j];
+      if (!cell) { line.push(""); continue; }
+      // f = valeur formatée telle qu'affichée dans le Sheet ("50%", "1 000,00 $")
+      if (cell.f !== undefined && cell.f !== null) line.push(cell.f);
+      else if (cell.v !== undefined && cell.v !== null) line.push(cell.v);
+      else line.push("");
+    }
+    grid.push(line);
+  }
+  return grid;
+}
+
 function fetchTab(gid) {
-  var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq"
-          + "?tqx=out:csv&headers=0&gid=" + encodeURIComponent(gid)
-          + "&_=" + Date.now();
+  return new Promise(function (resolve, reject) {
+    var cb = "__gvizcb" + Date.now() + Math.floor(Math.random() * 100000);
+    var script = document.createElement("script");
+    var settled = false;
 
-  return fetch(url, { cache: "no-store" })
-    .then(function (res) {
-      if (!res.ok) throw new Error("Réponse HTTP " + res.status);
-      return res.text();
-    })
-    .then(function (txt) {
-      if (/^\s*(<!DOCTYPE|<html)/i.test(txt)) {
-        throw new Error("Le Google Sheet n'est pas accessible publiquement.");
+    function cleanup() {
+      try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cb] = function (res) {
+      if (settled) return;
+      settled = true; cleanup();
+      if (!res || !res.table) {
+        reject(new Error("Le Sheet a répondu, mais sans données exploitables."));
+        return;
       }
-      return parseCSV(txt);
-    });
+      try { resolve(tableToGrid(res.table)); }
+      catch (e) { reject(e); }
+    };
+
+    script.onerror = function () {
+      if (settled) return;
+      settled = true; cleanup();
+      reject(new Error("Impossible de joindre le Google Sheet."));
+    };
+
+    setTimeout(function () {
+      if (settled) return;
+      settled = true; cleanup();
+      reject(new Error("Le Google Sheet n'a pas répondu à temps."));
+    }, 20000);
+
+    script.charset = "utf-8";
+    script.src = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq"
+               + "?tqx=out:json;responseHandler:" + cb
+               + "&headers=0&gid=" + encodeURIComponent(gid)
+               + "&_=" + Date.now();
+    document.head.appendChild(script);
+  });
 }
 
-/* ---------- Extraction des données ---------- */
-function extract(grid, metrics) {
-  // ligne d'en-tête = celle qui contient "MÉTRIQUE" dans les premières colonnes
+/* ============================================================
+   EXTRACTION
+   ============================================================ */
+
+function extract(grid, board) {
+  /* --- ligne d'en-tête : celle qui contient « MÉTRIQUE » --- */
   var hRow = -1;
-  for (var r = 0; r < Math.min(grid.length, 12); r++) {
+  for (var r = 0; r < Math.min(grid.length, 12) && hRow === -1; r++) {
     var head = grid[r].slice(0, 4);
     for (var k = 0; k < head.length; k++) {
       if (norm(head[k]) === "metrique") { hRow = r; break; }
     }
-    if (hRow !== -1) break;
   }
   if (hRow === -1) hRow = 1;
 
   var headers = grid[hRow].map(norm);
 
-  // index de colonne pour chaque métrique
-  var cols = metrics.map(function (m) {
-    var target = norm(m.header);
+  function colOf(headerName) {
+    if (!headerName) return -1;
+    var target = norm(headerName);
     var idx = headers.indexOf(target);
-    if (idx === -1) {
-      for (var i = 0; i < headers.length; i++) {
-        var h = headers[i];
-        if (h && (h.indexOf(target) !== -1 || target.indexOf(h) !== -1)) { idx = i; break; }
-      }
+    if (idx !== -1) return idx;
+    for (var i = 0; i < headers.length; i++) {
+      var h = headers[i];
+      if (h && (h.indexOf(target) !== -1 || target.indexOf(h) !== -1)) return i;
     }
-    return idx;
-  });
+    return -1;
+  }
 
-  // lignes "Semaine N" et ligne "Objectif"
+  /* --- lignes « Semaine N » et ligne « Objectif » --- */
   var weeks = [], goalRow = null;
   for (var rr = hRow + 1; rr < grid.length; rr++) {
     var a = norm(grid[rr][0]);
@@ -133,120 +161,201 @@ function extract(grid, metrics) {
     }
   }
 
-  function cellOf(row, col) {
+  function cell(row, col) {
     if (col === -1 || row === null || row === undefined) return null;
     var line = grid[row];
     return line ? line[col] : null;
   }
+  function num(row, col) {
+    var v = toNum(cell(row, col));
+    return v ? v.n : null;
+  }
+  function goalOf(headerName) {
+    return goalRow === null ? null : num(goalRow, colOf(headerName));
+  }
 
-  // dernière semaine ayant au moins une donnée parmi les métriques suivies
-  var current = null;
-  for (var w = weeks.length - 1; w >= 0; w--) {
-    var hasData = false;
-    for (var c = 0; c < cols.length; c++) {
-      var v = cellOf(weeks[w].r, cols[c]);
-      if (v !== null && v !== undefined && String(v).trim() !== "") { hasData = true; break; }
+  /* --- toutes les colonnes suivies, pour repérer la semaine courante --- */
+  var tracked = [];
+  for (var i = 0; i < board.rows.length; i++) {
+    for (var j = 0; j < board.rows[i].length; j++) {
+      var m = board.rows[i][j];
+      [m.header, m.num, m.den, m.lost, m.base].forEach(function (h) {
+        if (h) { var c = colOf(h); if (c !== -1 && tracked.indexOf(c) === -1) tracked.push(c); }
+      });
     }
-    if (hasData) { current = weeks[w]; break; }
+  }
+
+  var current = null;
+  for (var w = weeks.length - 1; w >= 0 && !current; w--) {
+    for (var t = 0; t < tracked.length; t++) {
+      var v = cell(weeks[w].r, tracked[t]);
+      if (v !== null && v !== undefined && String(v).trim() !== "") { current = weeks[w]; break; }
+    }
   }
   if (!current && weeks.length) current = weeks[weeks.length - 1];
 
-  var out = metrics.map(function (m, i) {
-    var col  = cols[i];
-    var cur  = current ? toNum(cellOf(current.r, col)) : null;
-    var goal = goalRow !== null ? toNum(cellOf(goalRow, col)) : null;
+  var curIdx = -1;
+  if (current) for (var z = 0; z < weeks.length; z++) if (weeks[z].r === current.r) curIdx = z;
 
-    // index de la semaine courante
-    var ci = -1;
-    if (current) {
-      for (var z = 0; z < weeks.length; z++) if (weeks[z].r === current.r) ci = z;
+  /* ---------- métrique simple : lecture directe d'une colonne ---------- */
+  function readSimple(m) {
+    var col = colOf(m.header);
+    if (col === -1) {
+      return { found: false, value: null, prev: null, goal: null };
     }
 
-    // historique décroissant des valeurs présentes avant la semaine courante
+    var cur = current ? num(current.r, col) : null;
+
+    // historique décroissant avant la semaine courante
     var hist = [];
-    for (var k2 = ci - 1; k2 >= 0; k2--) {
-      var p = toNum(cellOf(weeks[k2].r, col));
-      if (p !== null) hist.push({ n: p.n, num: weeks[k2].num });
+    for (var q = curIdx - 1; q >= 0; q--) {
+      var p = num(weeks[q].r, col);
+      if (p !== null) hist.push({ n: p, num: weeks[q].num });
     }
 
-    // si la case de la semaine courante est vide, on retombe sur la dernière
-    // valeur connue et on l'indique discrètement (données pas encore saisies)
-    var value = cur ? cur.n : null;
-    var staleWeek = null;
-    var prev = hist.length ? hist[0].n : null;
-
-    if (value === null && hist.length) {
+    var value = cur, stale = null, prev = hist.length ? hist[0].n : null;
+    if (value === null && hist.length) {          // case vide → dernière valeur connue
       value = hist[0].n;
-      staleWeek = hist[0].num;
-      prev = hist.length > 1 ? hist[1].n : null;
+      stale = hist[0].num;
+      prev  = hist.length > 1 ? hist[1].n : null;
     }
 
     return {
-      header: m.header,
-      label:  m.label,
-      dir:    m.dir,
-      fmt:    m.fmt,
-      found:  col !== -1,
-      value:  value,
-      prev:   prev,
-      goal:   goal ? goal.n : null,
-      stale:  staleWeek
+      found: true, value: value, prev: prev, goal: goalOf(m.header),
+      tag: stale ? "sem. " + stale : null
     };
+  }
+
+  /* ---------- ratio : num ÷ den, en pourcentage ---------- */
+  function readRatio(m) {
+    var cn = colOf(m.num), cd = colOf(m.den);
+    if (cn === -1 || cd === -1) return { found: false, value: null, prev: null, goal: null };
+
+    function at(row) {
+      var a = num(row, cn), b = num(row, cd);
+      if (a === null || b === null || b === 0) return null;
+      return { pct: a / b * 100, a: a, b: b };
+    }
+
+    var cur = current ? at(current.r) : null;
+    var prev = null;
+    for (var q = curIdx - 1; q >= 0 && !prev; q--) prev = at(weeks[q].r);
+
+    return {
+      found: true,
+      value: cur ? cur.pct : null,
+      prev:  prev ? prev.pct : null,
+      goal:  goalOf(m.goalHeader || m.num),
+      tag:   cur ? (nf(cur.a) + " / " + nf(cur.b) + (m.unitLabel ? " " + m.unitLabel : "")) : null
+    };
+  }
+
+  /* ---------- churn : pertes cumulées ÷ effectif de départ ---------- */
+  function readChurn(m) {
+    var cl = colOf(m.lost), cb = colOf(m.base);
+    if (cl === -1 || cb === -1) return { found: false, value: null, prev: null, goal: null };
+
+    var n = m.weeks || 4;
+
+    // semaines disposant d'une valeur de pertes, dans l'ordre chronologique
+    var seq = [];
+    for (var q = 0; q <= (curIdx === -1 ? weeks.length - 1 : curIdx); q++) {
+      var lost = num(weeks[q].r, cl);
+      if (lost !== null) seq.push({ r: weeks[q].r, num: weeks[q].num, lost: lost });
+    }
+
+    // période de n semaines se terminant à l'index `end`
+    function period(end) {
+      var start = end - n + 1;
+      if (start < 0) return null;
+      var sum = 0;
+      for (var k = start; k <= end; k++) sum += seq[k].lost;
+      var base = num(seq[start].r, cb);
+      if (base === null || base === 0) return null;
+      return { pct: sum / base * 100, from: seq[start].num, to: seq[end].num };
+    }
+
+    var cur  = seq.length     ? period(seq.length - 1)     : null;
+    var prev = seq.length > n ? period(seq.length - 1 - n) : null;
+
+    return {
+      found: true,
+      value: cur  ? cur.pct  : null,
+      prev:  prev ? prev.pct : null,
+      goal:  goalOf(m.goalHeader),
+      tag:   cur ? ("S" + cur.from + "–S" + cur.to) : null,
+      note:  prev ? ("Objectif " + fmtValue(goalOf(m.goalHeader), "pct")
+                     + " · préc. " + fmtValue(prev.pct, "pct")) : null
+    };
+  }
+
+  /* --- assemblage --- */
+  var out = board.rows.map(function (row) {
+    return row.map(function (m) {
+      var d = m.calc === "ratio" ? readRatio(m)
+            : m.calc === "churn" ? readChurn(m)
+            : readSimple(m);
+      return {
+        label: m.label, dir: m.dir, fmt: m.fmt, calc: m.calc || null,
+        found: d.found, value: d.value, prev: d.prev, goal: d.goal,
+        tag: d.tag || null, note: d.note || null
+      };
+    });
   });
 
-  return { metrics: out, week: current ? current.num : null };
+  return { rows: out, week: current ? current.num : null };
 }
 
-/* ---------- Rendu d'une carte ---------- */
+/* ============================================================
+   RENDU
+   ============================================================ */
+
 function renderCard(m) {
   var el = document.createElement("div");
-  el.className = "card";
 
-  var hasVal  = m.value !== null;
-  var hasGoal = m.goal !== null && m.goal !== 0;
+  var has = m.value !== null && m.value !== undefined;
+  var hg  = m.goal !== null && m.goal !== undefined && m.goal !== 0;
 
-  // ratio d'atteinte de l'objectif
   var ratio = null;
-  if (hasVal && hasGoal) {
+  if (has && hg) {
     ratio = (m.dir === "down") ? (m.value === 0 ? 1 : m.goal / m.value) : m.value / m.goal;
     if (!isFinite(ratio)) ratio = null;
   }
 
-  var state = "none";
-  if (ratio !== null) state = ratio >= 1 ? "ok" : (ratio >= 0.8 ? "close" : "miss");
-  el.className = "card " + state;
+  var state = ratio === null ? "none" : (ratio >= 1 ? "ok" : (ratio >= 0.8 ? "close" : "miss"));
+  el.className = "card " + state + (m.found ? "" : " todo");
 
-  // delta vs semaine précédente
+  /* écart avec la période précédente */
   var deltaHtml = "";
-  if (hasVal && m.prev !== null) {
+  if (has && m.prev !== null && m.prev !== undefined) {
     var d = m.value - m.prev;
+    var rounded = Math.abs(d) < 10 ? Math.round(d * 100) / 100 : Math.round(d);
     var good = (m.dir === "down") ? d < 0 : d > 0;
-    var cls = d === 0 ? "flat" : (good ? "up" : "down");
-    var sign = d > 0 ? "+" : (d < 0 ? "−" : "");
-    var abs = Math.abs(d);
-    var txt = (m.fmt === "pct")
-      ? (Math.round(abs * 10) / 10) + " pt"
-      : nf((abs < 10 && abs % 1 !== 0) ? Math.round(abs * 10) / 10 : Math.round(abs));
-    var arrow = d === 0 ? "→" : (d > 0 ? "↑" : "↓");
-    deltaHtml = '<span class="delta ' + cls + '">' + arrow + " " + sign + txt + "</span>";
+    var cls  = rounded === 0 ? "flat" : (good ? "up" : "down");
+    var ar   = rounded === 0 ? "→" : (d > 0 ? "↑" : "↓");
+    var sg   = rounded > 0 ? "+" : (rounded < 0 ? "−" : "");
+    deltaHtml = '<span class="delta ' + cls + '">' + ar + " " + sg
+              + nf(Math.abs(rounded)) + (m.fmt === "pct" ? " pt" : "") + "</span>";
   }
 
-  var pctTxt  = ratio !== null ? Math.round(ratio * 100) + " %" : "—";
-  var barW    = ratio !== null ? Math.min(100, Math.max(2, ratio * 100)) : 0;
-  var goalTxt = hasGoal
-    ? "Objectif " + fmtValue(m.goal, m.fmt)
-    : (m.found ? "Aucun objectif" : "Colonne introuvable");
+  var pctTxt = ratio === null ? "—" : Math.round(Math.min(ratio, 9.99) * 100) + " %";
+  var barW   = ratio === null ? 0 : Math.min(100, Math.max(2, ratio * 100));
 
-  var staleTag = m.stale ? '<span class="stale-tag">sem. ' + m.stale + "</span>" : "";
+  var note = m.note ? m.note
+           : hg ? ("Objectif " + fmtValue(m.goal, m.fmt))
+           : (m.found ? "Aucun objectif" : "Colonne manquante");
+
+  var tag = m.tag ? '<span class="tag' + (m.calc ? " calc" : "") + '">' + m.tag + "</span>"
+        : (m.found ? "" : '<span class="tag warn">à créer</span>');
 
   el.innerHTML =
-    '<div class="card-label">' + m.label + staleTag + "</div>" +
+    '<div class="card-label">' + m.label + tag + "</div>" +
     '<div class="card-value">' +
-      '<span class="value' + (hasVal ? "" : " empty") + '">' + fmtValue(m.value, m.fmt) + "</span>" +
+      '<span class="value' + (has ? "" : " empty") + '">' + fmtValue(m.value, m.fmt) + "</span>" +
       deltaHtml +
     "</div>" +
     '<div class="card-foot">' +
-      '<div class="goal-row"><span>' + goalTxt + '</span><span class="pct">' + pctTxt + "</span></div>" +
+      '<div class="goal-row"><span class="txt">' + note + '</span><span class="pct">' + pctTxt + "</span></div>" +
       '<div class="bar"><i></i></div>' +
     "</div>";
 
@@ -276,7 +385,10 @@ function startClock() {
   setInterval(tick, 20000);
 }
 
-/* ---------- Boucle principale ---------- */
+/* ============================================================
+   BOUCLE PRINCIPALE
+   ============================================================ */
+
 function boot(boardKey) {
   var board = BOARDS[boardKey];
   var gid   = GIDS[boardKey];
@@ -286,47 +398,64 @@ function boot(boardKey) {
 
   var loading = document.getElementById("loading");
   var errBox  = document.getElementById("error");
-  var grid    = document.getElementById("grid");
+  var host    = document.getElementById("grid");
   var dot     = document.getElementById("dot");
   var syncTxt = document.getElementById("sync-text");
 
-  if (!gid || gid === "REMPLACER") {
+  host.className = "rows";   // rangées de hauteur égale
+
+  function fail(msg) {
     loading.hidden = true;
     errBox.hidden = false;
-    document.getElementById("error-msg").innerHTML =
-      "Le <code>gid</code> de cet onglet n'est pas encore configuré.<br><br>" +
-      "Ouvre le Google Sheet, clique sur l'onglet <strong>" + board.title + "</strong>, " +
-      "copie le chiffre après <code>#gid=</code> dans l'URL, puis colle-le dans " +
-      "<code>config.js</code> à la ligne <code>" + boardKey + ': "REMPLACER"</code>.';
+    document.getElementById("error-msg").innerHTML = msg;
+    dot.className = "dot err";
+  }
+
+  if (!gid || gid === "REMPLACER") {
+    fail("Le <code>gid</code> de l'onglet <strong>" + board.title + "</strong> n'est pas configuré dans <code>config.js</code>.");
     return;
   }
 
   function load() {
-    return fetchTab(gid).then(function (gridData) {
-      var res = extract(gridData, board.metrics);
+    return fetchTab(gid).then(function (grid) {
+      var res = extract(grid, board);
 
-      grid.innerHTML = "";
-      res.metrics.forEach(function (m) { grid.appendChild(renderCard(m)); });
+      // diagnostic : aucune colonne reconnue
+      var found = 0, total = 0;
+      for (var i = 0; i < res.rows.length; i++) {
+        for (var j = 0; j < res.rows[i].length; j++) {
+          total++; if (res.rows[i][j].found) found++;
+        }
+      }
+      if (found === 0) {
+        fail("Le Sheet répond, mais aucune colonne n'a été reconnue dans l'onglet <code>gid=" + gid + "</code>."
+           + "<br><br>Vérifie que la ligne d'en-tête contient toujours <code>MÉTRIQUE</code> en colonne B.");
+        syncTxt.textContent = "Colonnes non reconnues";
+        return;
+      }
+
+      host.innerHTML = "";
+      res.rows.forEach(function (row) {
+        var rowEl = document.createElement("div");
+        rowEl.className = "row";
+        row.forEach(function (m) { rowEl.appendChild(renderCard(m)); });
+        host.appendChild(rowEl);
+      });
 
       document.getElementById("week-value").textContent =
         res.week ? "Semaine " + res.week : "—";
 
       dot.className = "dot";
       var now = new Date();
-      syncTxt.textContent = "Synchronisé à " +
-        now.getHours() + "h" + ("0" + now.getMinutes()).slice(-2);
+      syncTxt.textContent = "Synchronisé à " + now.getHours() + "h" + ("0" + now.getMinutes()).slice(-2);
 
       loading.hidden = true;
       errBox.hidden = true;
     }).catch(function (e) {
       dot.className = "dot err";
       syncTxt.textContent = "Échec de synchronisation";
-      if (!grid.children.length) {
-        loading.hidden = true;
-        errBox.hidden = false;
-        document.getElementById("error-msg").innerHTML =
-          e.message + "<br><br>Vérifie que le Google Sheet est partagé en " +
-          "« Tous les utilisateurs disposant du lien — Lecteur ».";
+      if (!host.children.length) {
+        fail(e.message + "<br><br>Vérifie que le Sheet est partagé en « Tous les utilisateurs disposant du lien — Lecteur ».");
       }
     });
   }
@@ -334,17 +463,15 @@ function boot(boardKey) {
   startClock();
   load();
 
-  // rafraîchissement automatique
   setInterval(load, Math.max(1, REFRESH_MINUTES) * 60 * 1000);
 
-  // rechargement complet vers 4 h du matin : évite toute dérive mémoire
-  // si la TV reste allumée pendant des semaines
+  // rechargement complet vers 4 h : stabilité sur plusieurs semaines
   setInterval(function () {
     var h = new Date();
     if (h.getHours() === 4 && h.getMinutes() < 5) location.reload();
   }, 4 * 60 * 1000);
 
-  // refresh manuel : touche R (ou clic / tap n'importe où sur l'écran)
+  // refresh manuel : touche R, ou clic / tap
   window.addEventListener("keydown", function (e) {
     if (e.key && e.key.toLowerCase() === "r") load();
   });

@@ -61,8 +61,8 @@ body::before {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: clamp(20px, 2.6vw, 46px) clamp(24px, 3vw, 56px);
-  gap: clamp(14px, 1.6vh, 30px);
+  padding: clamp(16px, 1.9vw, 38px) clamp(18px, 2.2vw, 44px);
+  gap: clamp(9px, 1.15vw, 22px);
 }
 
 /* ================= HEADER ================= */
@@ -78,8 +78,8 @@ body::before {
 .head-left { display: flex; align-items: center; gap: clamp(14px, 1.4vw, 24px); }
 
 .mark {
-  width: clamp(38px, 3.4vw, 60px);
-  height: clamp(38px, 3.4vw, 60px);
+  width: clamp(32px, 2.9vw, 52px);
+  height: clamp(32px, 2.9vw, 52px);
   border-radius: 30%;
   background: linear-gradient(150deg, var(--red-soft), var(--red) 55%, #8E0F14);
   box-shadow: 0 0 34px var(--red-glow);
@@ -92,14 +92,14 @@ body::before {
 .titles { display: flex; flex-direction: column; gap: 2px; }
 
 h1 {
-  font-size: clamp(22px, 2.35vw, 44px);
+  font-size: clamp(19px, 2.05vw, 38px);
   font-weight: 700;
   letter-spacing: -0.028em;
   line-height: 1.05;
 }
 
 .subtitle {
-  font-size: clamp(12px, 1.02vw, 19px);
+  font-size: clamp(10px, 0.9vw, 17px);
   font-weight: 500;
   color: var(--grey-1);
   letter-spacing: -0.01em;
@@ -116,7 +116,7 @@ h1 {
   flex-direction: column;
   align-items: flex-end;
   gap: 3px;
-  padding: clamp(9px, 0.85vh, 15px) clamp(16px, 1.3vw, 26px);
+  padding: clamp(7px, 0.6vw, 12px) clamp(13px, 1.2vw, 23px);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -129,7 +129,7 @@ h1 {
   color: var(--grey-2);
 }
 .week-pill .v {
-  font-size: clamp(15px, 1.32vw, 26px);
+  font-size: clamp(13px, 1.2vw, 23px);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -139,7 +139,7 @@ h1 {
   min-width: 4.6em;
 }
 .clock .t {
-  font-size: clamp(22px, 2vw, 40px);
+  font-size: clamp(19px, 1.75vw, 34px);
   font-weight: 300;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
@@ -155,34 +155,42 @@ h1 {
 
 /* ================= GRILLE KPI ================= */
 
-.grid {
+/* ---------- 3 rangées de hauteur égale (calibré TV 50 pouces) ---------- */
+.rows {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: clamp(12px, 1.15vw, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(7px, 0.9vw, 18px);
+  min-height: 0;
+}
+.row {
+  flex: 1;
+  display: flex;
+  gap: clamp(7px, 0.9vw, 18px);
   min-height: 0;
 }
 
 .card {
+  flex: 1;
+  min-width: 0;
   position: relative;
   background: linear-gradient(168deg, var(--surface-2) 0%, var(--surface) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: clamp(16px, 1.5vw, 32px);
+  border-radius: clamp(12px, 1.1vw, 22px);
+  padding: clamp(10px, 1.05vw, 22px) clamp(11px, 1.15vw, 24px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  min-height: 0;
 }
+.card.todo { border-style: dashed; border-color: rgba(255,255,255,0.2); }
 
 /* liseré d'état en haut de la carte */
 .card::after {
   content: "";
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
+  height: clamp(2px, 0.2vw, 4px);
   background: var(--grey-3);
   opacity: 0.9;
 }
@@ -192,35 +200,40 @@ h1 {
 .card.none::after    { background: var(--grey-3); }
 
 .card-label {
-  font-size: clamp(11px, 0.94vw, 18px);
+  font-size: clamp(9px, 0.82vw, 16px);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
   color: var(--grey-1);
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
-.stale-tag {
+.tag {
   display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
+  margin-left: clamp(4px, 0.42vw, 8px);
+  padding: 1px clamp(4px, 0.45vw, 9px);
   border-radius: 999px;
-  background: rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.08);
   border: 1px solid var(--border);
-  color: var(--grey-2);
-  font-size: 0.78em;
+  color: #8e8e93;
+  font-size: 0.8em;
   font-weight: 700;
   letter-spacing: 0.02em;
+  text-transform: none;
   vertical-align: middle;
+  white-space: nowrap;
 }
+.tag.calc { background: rgba(232,35,42,0.14); border-color: rgba(232,35,42,0.32); color: #FF7A7F; }
+.tag.warn { background: rgba(255,212,38,0.13); border-color: rgba(255,212,38,0.30); color: var(--amber); }
 
 .card-value {
   display: flex;
   align-items: baseline;
   gap: 0.28em;
-  margin: clamp(4px, 0.7vh, 12px) 0;
+  margin: clamp(2px, 0.3vw, 7px) 0;
 }
 .value {
-  font-size: clamp(40px, 5.6vw, 112px);
+  font-size: clamp(26px, 3.85vw, 76px);
   font-weight: 700;
   letter-spacing: -0.045em;
   line-height: 0.92;
@@ -229,7 +242,7 @@ h1 {
 .value.empty { color: var(--grey-3); font-weight: 400; }
 
 .delta {
-  font-size: clamp(12px, 1.05vw, 21px);
+  font-size: clamp(10px, 0.88vw, 17px);
   font-weight: 700;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
@@ -239,22 +252,23 @@ h1 {
 .delta.down { color: var(--red-soft); }
 .delta.flat { color: var(--grey-2); }
 
-.card-foot { display: flex; flex-direction: column; gap: clamp(6px, 0.8vh, 11px); }
+.card-foot { display: flex; flex-direction: column; gap: clamp(3px, 0.4vw, 8px); }
 
 .goal-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: clamp(10px, 0.84vw, 16px);
+  font-size: clamp(9px, 0.72vw, 14px);
   font-weight: 600;
   color: var(--grey-2);
   letter-spacing: 0.01em;
 }
-.goal-row .pct { color: var(--white); font-variant-numeric: tabular-nums; }
+.goal-row .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.goal-row .pct { color: var(--white); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
 .bar {
-  height: clamp(5px, 0.55vh, 9px);
+  height: clamp(3px, 0.38vw, 7px);
   background: rgba(255,255,255,0.07);
   border-radius: 999px;
   overflow: hidden;
@@ -279,7 +293,7 @@ h1 {
   justify-content: space-between;
   gap: 18px;
   flex-shrink: 0;
-  font-size: clamp(10px, 0.8vw, 15px);
+  font-size: clamp(9px, 0.72vw, 14px);
   color: var(--grey-2);
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -340,21 +354,22 @@ h1 {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* apparition douce des cartes */
-.card { animation: rise 0.65s cubic-bezier(0.22,1,0.36,1) both; }
-.card:nth-child(1){animation-delay:.02s} .card:nth-child(2){animation-delay:.06s}
-.card:nth-child(3){animation-delay:.10s} .card:nth-child(4){animation-delay:.14s}
-.card:nth-child(5){animation-delay:.18s} .card:nth-child(6){animation-delay:.22s}
-.card:nth-child(7){animation-delay:.26s} .card:nth-child(8){animation-delay:.30s}
+/* apparition douce des rangées */
+.row { animation: rise 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+.row:nth-child(1) { animation-delay: .02s; }
+.row:nth-child(2) { animation-delay: .09s; }
+.row:nth-child(3) { animation-delay: .16s; }
 @keyframes rise { from { opacity: 0; transform: translateY(16px) scale(0.985); } }
 
 /* ---------- portrait / petits écrans ---------- */
 @media (max-aspect-ratio: 1/1) {
-  .grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); }
   .clock { display: none; }
+  .row { flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
-  .grid { grid-template-columns: 1fr; grid-template-rows: none; }
+  .row { flex-direction: column; }
+  .rows { gap: 10px; }
+  .card { min-height: 120px; }
   body, html { overflow: auto; }
   .shell { height: auto; }
 }
