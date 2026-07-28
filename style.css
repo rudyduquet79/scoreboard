@@ -131,7 +131,7 @@ h1 {
 .week-pill .v {
   font-size: clamp(13px, 1.2vw, 23px);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.005em;
 }
 
 .clock {
@@ -141,7 +141,7 @@ h1 {
 .clock .t {
   font-size: clamp(19px, 1.75vw, 34px);
   font-weight: 300;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -201,8 +201,8 @@ h1 {
 
 .card-label {
   font-size: clamp(9px, 0.82vw, 16px);
-  font-weight: 600;
-  letter-spacing: 0.045em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--grey-1);
   line-height: 1.2;
@@ -229,22 +229,33 @@ h1 {
 .card-value {
   display: flex;
   align-items: baseline;
-  gap: 0.28em;
+  gap: 0.22em;
   margin: clamp(2px, 0.3vw, 7px) 0;
+  min-width: 0;
+  padding-right: 0.1em;   /* garde l'écart hebdomadaire à distance du bord */
 }
 .value {
   font-size: clamp(26px, 3.85vw, 76px);
   font-weight: 700;
-  letter-spacing: -0.045em;
+  letter-spacing: 0.012em;
   line-height: 0.92;
   font-variant-numeric: tabular-nums;
 }
 .value.empty { color: var(--grey-3); font-weight: 400; }
 
+/* symbole % ou $ : un peu plus petit que le chiffre */
+.unit {
+  font-size: 0.62em;
+  font-weight: 700;
+  margin-left: 0.1em;
+  letter-spacing: 0;
+}
+.delta .unit { font-size: 0.78em; margin-left: 0.18em; }
+
 .delta {
   font-size: clamp(10px, 0.88vw, 17px);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

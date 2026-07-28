@@ -53,6 +53,16 @@ function fmtValue(n, fmt) {
   return nf(v);
 }
 
+/* Même valeur, mais le symbole (%, $) est enveloppé pour être affiché un peu
+   plus petit que le chiffre : plus lisible, et ça libère de la largeur dans
+   les tuiles où la valeur et l'écart hebdomadaire se disputent la place. */
+function fmtValueHtml(n, fmt) {
+  var t = fmtValue(n, fmt);
+  if (fmt === "pct") return t.replace(/\s*%$/, '<span class="unit">%</span>');
+  if (fmt === "money") return t.replace(/^\$/, '<span class="unit">$</span>');
+  return t;
+}
+
 /* ---------- Récupération du Sheet ----------
    JSONP plutôt que fetch : l'endpoint gviz de Google ne renvoie pas
    d'en-tête Access-Control-Allow-Origin, donc un fetch depuis un autre
@@ -371,7 +381,8 @@ function renderCard(m) {
     var ar   = rounded === 0 ? "→" : (d > 0 ? "↑" : "↓");
     var sg   = rounded > 0 ? "+" : (rounded < 0 ? "−" : "");
     deltaHtml = '<span class="delta ' + cls + '">' + ar + " " + sg
-              + nf(Math.abs(rounded)) + (m.fmt === "pct" ? " pt" : "") + "</span>";
+              + nf(Math.abs(rounded))
+              + (m.fmt === "pct" ? '<span class="unit">pt</span>' : "") + "</span>";
   }
 
   var pctTxt = ratio === null ? "—" : Math.round(Math.min(ratio, 9.99) * 100) + " %";
@@ -387,7 +398,7 @@ function renderCard(m) {
   el.innerHTML =
     '<div class="card-label">' + m.label + tag + "</div>" +
     '<div class="card-value">' +
-      '<span class="value' + (has ? "" : " empty") + '">' + fmtValue(m.value, m.fmt) + "</span>" +
+      '<span class="value' + (has ? "" : " empty") + '">' + fmtValueHtml(m.value, m.fmt) + "</span>" +
       deltaHtml +
     "</div>" +
     '<div class="card-foot">' +
