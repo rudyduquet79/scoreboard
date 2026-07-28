@@ -127,10 +127,16 @@ function fetchTab(gid) {
       reject(new Error("Le Google Sheet n'a pas répondu à temps."));
     }, 20000);
 
+    /* Pas de paramètre headers : il faut laisser Google détecter lui-même les
+       deux lignes d'en-tête du Sheet. Avec headers=0, Google type chaque
+       colonne d'après ses données — une colonne de chiffres devient
+       « numérique » et le texte de son en-tête est purement supprimé de la
+       réponse JSON. En le laissant détecter, les noms sont conservés dans
+       cols[].label, préfixés de leur section.                              */
     script.charset = "utf-8";
     script.src = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq"
                + "?tqx=out:json;responseHandler:" + cb
-               + "&headers=0&gid=" + encodeURIComponent(gid)
+               + "&gid=" + encodeURIComponent(gid)
                + "&_=" + Date.now();
     document.head.appendChild(script);
   });
