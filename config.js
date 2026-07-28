@@ -59,7 +59,8 @@ const BOARDS = {
         { label: "Nb de RDV",       header: "Nb Rendez-vous",              dir: "up", fmt: "num" },
         { label: "Show",            calc: "ratio",                         dir: "up", fmt: "pct",
           num: "Show", den: "Nb Rendez-vous", goalHeader: "Show", unitLabel: "RDV" },
-        { label: "Taux de conversion", header: "Taux de conversion",       dir: "up", fmt: "pct" }
+        { label: "Taux de conversion", header: "Taux de conversion",       dir: "up", fmt: "pct" },
+        { label: "Vente Fit pour Vrai", header: "Vente FIT pour Vrai",     dir: "up", fmt: "num" }
       ],
       [
         { label: "Visite site web",   header: "Nouvelles visites sur le site", dir: "up", fmt: "num" },

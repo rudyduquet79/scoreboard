@@ -385,7 +385,11 @@ function renderCard(m) {
               + (m.fmt === "pct" ? '<span class="unit">pt</span>' : "") + "</span>";
   }
 
-  var pctTxt = ratio === null ? "—" : Math.round(Math.min(ratio, 9.99) * 100) + " %";
+  /* Le pourcentage d'atteinte est plafonné à 100 %. Sans ça, une métrique
+     « moins c'est mieux » affiche objectif ÷ valeur, ce qui donne des chiffres
+     déroutants (un churn de 1,33 % contre une cible de 4,5 % affichait 337 %).
+     Le liseré vert et la barre pleine disent déjà que l'objectif est dépassé. */
+  var pctTxt = ratio === null ? "—" : Math.min(100, Math.round(ratio * 100)) + " %";
   var barW   = ratio === null ? 0 : Math.min(100, Math.max(2, ratio * 100));
 
   var note = m.note ? m.note
