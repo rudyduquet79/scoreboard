@@ -100,8 +100,8 @@ h1 {
 
 .subtitle {
   font-size: clamp(10px, 0.9vw, 17px);
-  font-weight: 500;
-  color: var(--grey-1);
+  font-weight: 600;
+  color: var(--white);
   letter-spacing: -0.01em;
 }
 
@@ -126,7 +126,7 @@ h1 {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--grey-2);
+  color: var(--grey-1);
 }
 .week-pill .v {
   font-size: clamp(13px, 1.2vw, 23px);
@@ -147,7 +147,7 @@ h1 {
 }
 .clock .d {
   font-size: clamp(10px, 0.78vw, 15px);
-  color: var(--grey-2);
+  color: var(--grey-1);
   font-weight: 500;
   text-transform: capitalize;
   margin-top: 3px;
@@ -204,7 +204,7 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--grey-1);
+  color: var(--white);
   line-height: 1.2;
 }
 
@@ -213,9 +213,9 @@ h1 {
   margin-left: clamp(4px, 0.42vw, 8px);
   padding: 1px clamp(4px, 0.45vw, 9px);
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid var(--border);
-  color: #8e8e93;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid var(--border-hi);
+  color: var(--white);
   font-size: 0.8em;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -270,9 +270,9 @@ h1 {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: clamp(9px, 0.72vw, 14px);
-  font-weight: 600;
-  color: var(--grey-2);
+  font-size: clamp(11px, 0.92vw, 18px);
+  font-weight: 700;
+  color: var(--white);
   letter-spacing: 0.01em;
 }
 .goal-row .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -304,9 +304,9 @@ h1 {
   justify-content: space-between;
   gap: 18px;
   flex-shrink: 0;
-  font-size: clamp(9px, 0.72vw, 14px);
-  color: var(--grey-2);
-  font-weight: 500;
+  font-size: clamp(10px, 0.78vw, 15px);
+  color: var(--grey-1);
+  font-weight: 600;
   letter-spacing: 0.01em;
 }
 
