@@ -268,6 +268,8 @@ function extract(grid, board) {
 
     return {
       found: true, value: value, prev: prev, goal: goalOf(m.header),
+      stale: stale !== null,
+      fresh: cur !== null,
       tag: stale ? "sem. " + stale : null
     };
   }
@@ -292,6 +294,7 @@ function extract(grid, board) {
       value: cur ? cur.pct : null,
       prev:  prev ? prev.pct : null,
       goal:  goalOf(m.goalHeader || m.num),
+      fresh: !!cur,
       tag:   cur ? (nf(cur.a) + " / " + nf(cur.b) + (m.unitLabel ? " " + m.unitLabel : "")) : null
     };
   }
@@ -324,14 +327,22 @@ function extract(grid, board) {
     var cur  = seq.length     ? period(seq.length - 1)     : null;
     var prev = seq.length > n ? period(seq.length - 1 - n) : null;
 
+    /* Si la période de calcul se termine avant la semaine affichée, c'est que
+       « Membre Perdu » n'est plus saisi : le churn décrit alors une réalité
+       dépassée. On le marque périmé pour ne pas afficher un vert rassurant
+       à côté d'un effectif qui recule.                                    */
+    var stale = !!(cur && current && cur.to < current.num);
+
     return {
       found: true,
       value: cur  ? cur.pct  : null,
       prev:  prev ? prev.pct : null,
       goal:  goalOf(m.goalHeader),
+      stale: stale,
       tag:   cur ? ("S" + cur.from + "–S" + cur.to) : null,
-      note:  prev ? ("Objectif " + fmtValue(goalOf(m.goalHeader), "pct")
-                     + " · préc. " + fmtValue(prev.pct, "pct")) : null
+      note:  stale ? ("Pertes non saisies depuis S" + cur.to)
+             : (prev ? ("Objectif " + fmtValue(goalOf(m.goalHeader), "pct")
+                        + " · préc. " + fmtValue(prev.pct, "pct")) : null)
     };
   }
 
@@ -344,12 +355,27 @@ function extract(grid, board) {
       return {
         label: m.label, dir: m.dir, fmt: m.fmt, calc: m.calc || null,
         found: d.found, value: d.value, prev: d.prev, goal: d.goal,
-        tag: d.tag || null, note: d.note || null
+        tag: d.tag || null, note: d.note || null,
+        stale: d.stale || false,
+        fresh: d.fresh === undefined ? (d.value !== null && !d.stale) : d.fresh
       };
     });
   });
 
-  return { rows: out, week: current ? current.num : null };
+  /* Décompte pour l'avertissement de saisie : on ne compte que les métriques
+     dont la colonne existe réellement dans le Sheet. Une colonne absente
+     (« Nouveau membre », pas encore créée) n'est pas un oubli de saisie et ne
+     doit pas déclencher l'alerte.                                          */
+  var nFresh = 0, nTotal = 0;
+  for (var a1 = 0; a1 < out.length; a1++) {
+    for (var b1 = 0; b1 < out[a1].length; b1++) {
+      if (!out[a1][b1].found) continue;
+      nTotal++;
+      if (out[a1][b1].fresh) nFresh++;
+    }
+  }
+
+  return { rows: out, week: current ? current.num : null, fresh: nFresh, total: nTotal };
 }
 
 /* ============================================================
@@ -369,7 +395,9 @@ function renderCard(m) {
   }
 
   var state = ratio === null ? "none" : (ratio >= 1 ? "ok" : (ratio >= 0.8 ? "close" : "miss"));
-  el.className = "card " + state + (m.found ? "" : " todo");
+  // un chiffre périmé ne mérite pas un vert rassurant : on neutralise l'état
+  if (m.stale) state = "none";
+  el.className = "card " + state + (m.found ? "" : " todo") + (m.stale ? " stale" : "");
 
   /* écart avec la période précédente */
   var deltaHtml = "";
@@ -455,6 +483,8 @@ function boot(boardKey) {
 
   host.className = "rows";   // rangées de hauteur égale
 
+  var lastOk = 0;   // horodatage du dernier chargement réussi
+
   function fail(msg) {
     loading.hidden = true;
     errBox.hidden = false;
@@ -496,6 +526,23 @@ function boot(boardKey) {
       document.getElementById("week-value").textContent =
         res.week ? "Semaine " + res.week : "—";
 
+      /* Avertissement quand la semaine affichée n'est presque pas saisie :
+         sans ça, l'en-tête annonce « Semaine 32 » alors que la plupart des
+         tuiles montrent des chiffres de semaines antérieures.            */
+      var warn = document.getElementById("data-warning");
+      if (warn) {
+        if (res.week && res.fresh < res.total) {
+          warn.textContent = res.fresh + " métrique" + (res.fresh > 1 ? "s" : "")
+                           + " sur " + res.total + " saisie" + (res.fresh > 1 ? "s" : "")
+                           + " cette semaine";
+          warn.hidden = false;
+          warn.className = (res.fresh * 2 < res.total) ? "warn-pill bad" : "warn-pill";
+        } else {
+          warn.hidden = true;
+        }
+      }
+
+      lastOk = Date.now();
       dot.className = "dot";
       var now = new Date();
       syncTxt.textContent = "Synchronisé à " + now.getHours() + "h" + ("0" + now.getMinutes()).slice(-2);
@@ -514,13 +561,40 @@ function boot(boardKey) {
   startClock();
   load();
 
-  setInterval(load, Math.max(1, REFRESH_MINUTES) * 60 * 1000);
+  /* ---------- Rafraîchissement, à l'épreuve de la mise en veille ----------
+     Un simple setInterval de 60 minutes n'est pas fiable sur une TV : dès que
+     la page passe en arrière-plan ou que l'écran se met en veille, le
+     navigateur ralentit ou suspend complètement ses minuteries — l'échéance
+     peut ne jamais arriver.
 
-  // rechargement complet vers 4 h : stabilité sur plusieurs semaines
+     On compare donc l'horloge réelle à chaque battement, on bat souvent (une
+     fois par minute, ce qui survit au ralentissement), et on recharge aussi
+     dès que la page redevient visible ou que le réseau revient.          */
+
+  var refreshMs = Math.max(1, REFRESH_MINUTES) * 60 * 1000;
+
+  function refreshIfStale(force) {
+    var age = Date.now() - lastOk;
+    if (force || lastOk === 0 || age >= refreshMs) load();
+  }
+
+  setInterval(function () { refreshIfStale(false); }, 60 * 1000);
+
+  // la page redevient visible (sortie de veille, retour au premier plan)
+  if (typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) refreshIfStale(false);
+    });
+  }
+  window.addEventListener("focus", function () { refreshIfStale(false); });
+  window.addEventListener("online", function () { refreshIfStale(true); });
+
+  // rechargement complet de la page une fois par jour, vers 4 h
+  var lastReloadDay = new Date().getDate();
   setInterval(function () {
-    var h = new Date();
-    if (h.getHours() === 4 && h.getMinutes() < 5) location.reload();
-  }, 4 * 60 * 1000);
+    var now = new Date();
+    if (now.getHours() >= 4 && now.getDate() !== lastReloadDay) location.reload();
+  }, 60 * 1000);
 
   // refresh manuel : touche R, ou clic / tap
   window.addEventListener("keydown", function (e) {

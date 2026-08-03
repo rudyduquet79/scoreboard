@@ -105,6 +105,32 @@ h1 {
   letter-spacing: -0.01em;
 }
 
+/* pastille d'avertissement : saisie incomplète pour la semaine affichée */
+.warn-pill {
+  display: inline-block;
+  margin-left: clamp(6px, 0.6vw, 12px);
+  padding: 2px clamp(7px, 0.7vw, 13px);
+  border-radius: 999px;
+  background: rgba(255,212,38,0.15);
+  border: 1px solid rgba(255,212,38,0.4);
+  color: var(--amber);
+  font-size: 0.82em;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.warn-pill.bad {
+  background: rgba(232,35,42,0.16);
+  border-color: rgba(232,35,42,0.45);
+  color: var(--red-soft);
+}
+.warn-pill[hidden] { display: none; }
+
+/* tuile dont la valeur ne vient pas de la semaine affichée */
+.card.stale .value { color: var(--grey-1); }
+.card.stale::after { background: var(--grey-3); box-shadow: none; }
+
 .head-right {
   display: flex;
   align-items: center;
