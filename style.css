@@ -262,6 +262,7 @@ h1 {
 }
 .value {
   font-size: clamp(26px, 3.85vw, 76px);
+  /* la taille suit le nombre de tuiles de la rangée (voir plus bas) */
   font-weight: 700;
   letter-spacing: 0.012em;
   line-height: 0.92;
@@ -321,6 +322,42 @@ h1 {
 .card.ok    .bar > i { background: linear-gradient(90deg, #1E9E43, var(--green)); }
 .card.close .bar > i { background: linear-gradient(90deg, #C9A200, var(--amber)); }
 .card.miss  .bar > i { background: linear-gradient(90deg, #8E0F14, var(--red)); }
+
+/* ---------- densité : plus de tuiles dans une rangée = chiffre ajusté ----------
+   Le sélecteur compte les enfants de .row et réduit la valeur en conséquence,
+   pour qu'une rangée de 6 reste lisible sans déborder.                       */
+.row > .card:nth-child(5):last-child ~ .card,
+.row > .card:first-child:nth-last-child(5),
+.row > .card:first-child:nth-last-child(5) ~ .card { }
+
+/* rangée de 5 tuiles */
+.row > .card:first-child:nth-last-child(5) .value,
+.row > .card:first-child:nth-last-child(5) ~ .card .value {
+  font-size: clamp(24px, 3.5vw, 68px);
+}
+
+/* rangée de 6 tuiles */
+.row > .card:first-child:nth-last-child(6) .value,
+.row > .card:first-child:nth-last-child(6) ~ .card .value {
+  font-size: clamp(21px, 3vw, 58px);
+}
+.row > .card:first-child:nth-last-child(6) .card-label,
+.row > .card:first-child:nth-last-child(6) ~ .card .card-label {
+  font-size: clamp(8px, 0.74vw, 14px);
+  letter-spacing: 0.03em;
+}
+.row > .card:first-child:nth-last-child(6) .goal-row,
+.row > .card:first-child:nth-last-child(6) ~ .card .goal-row {
+  font-size: clamp(9px, 0.78vw, 15px);
+}
+.row > .card:first-child:nth-last-child(6) .delta,
+.row > .card:first-child:nth-last-child(6) ~ .card .delta {
+  font-size: clamp(9px, 0.76vw, 15px);
+}
+.row > .card:first-child:nth-last-child(6),
+.row > .card:first-child:nth-last-child(6) ~ .card {
+  padding: clamp(8px, 0.85vw, 18px) clamp(9px, 0.92vw, 19px);
+}
 
 /* ================= FOOTER ================= */
 

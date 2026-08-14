@@ -74,28 +74,38 @@ const BOARDS = {
   karate: {
     title: "Karaté Shinka-ryu",
     rows: [
+      /* Rangée 1 — les membres */
       [
-        { label: "Membre actif",   header: "Membre Actif Total", dir: "up",   fmt: "num" },
-        { label: "Nouveau membre", header: "Nouveau membre",     dir: "up",   fmt: "num" },
-        { label: "Membre perdu",   header: "Membre Perdu",       dir: "down", fmt: "num" },
-        { label: "Churn 28 jours", calc: "churn", weeks: 4,      dir: "down", fmt: "pct",
+        { label: "Membre actif",      header: "Membre Actif Total",   dir: "up",   fmt: "num" },
+        { label: "Nouveau membre",    header: "Nouveau membre",       dir: "up",   fmt: "num" },
+        { label: "Membre perdu",      header: "Membre Perdu",         dir: "down", fmt: "num" },
+        { label: "Churn 28 jours",    calc: "churn", weeks: 4,        dir: "down", fmt: "pct",
           lost: "Membre Perdu", base: "Membre Actif Total", goalHeader: "Churn Rate" },
-        // « Intégration » = le programme 6 semaines
-        { label: "Intégration",    header: "Abonnement 6 Semaines", dir: "up", fmt: "num" }
+        { label: "Abonn. récurrents", header: "Abonnement Récurrent", dir: "up",   fmt: "num" }
       ],
+
+      /* Rangée 2 — l'entonnoir de vente (colonnes C, H, I, J, K du Sheet) */
       [
         { label: "Lead Ads (META)",     header: "Publicités Facebook (Leads)", dir: "up", fmt: "num" },
         { label: "Nb d'intros",         header: "Nb d'Introduction",           dir: "up", fmt: "num" },
+        { label: "Taux de conversion",  header: "Taux de conversion",          dir: "up", fmt: "pct" },
+        // le Sheet nomme cette colonne « Abonnement 6-9 Semaines »
+        { label: "Intégration 6-9 sem", header: "Abonnement 6-9 Semaines",     dir: "up", fmt: "num" },
         { label: "Conversion annuelle", header: "Conversion Annuel",           dir: "up", fmt: "num" },
-        // « Leadership » : le Sheet contient une coquille (« Progrmme »),
-        // on cible donc le mot-clé plutôt que le libellé exact
-        { label: "Leadership",          header: "Leadership",                  dir: "up", fmt: "num" }
+        { label: "Témoignages",         header: "Témoignages",                 dir: "up", fmt: "num" }
       ],
+
+      /* Rangée 3 — les programmes (L, M, N) et la présence en ligne.
+         Les trois programmes sont des effectifs cumulés : l'écart hebdomadaire
+         affiché (+1, −2…) correspond au mouvement de la semaine.            */
       [
-        { label: "Visite site web",   header: "Nouvelles visites sur le site", dir: "up", fmt: "num" },
-        { label: "Nouveau follower",  header: "Nouveau follower All around",   dir: "up", fmt: "num" },
-        { label: "Nb follower total", header: "Nb follower Total",             dir: "up", fmt: "num" },
-        { label: "Témoignages",       header: "Témoignages",                   dir: "up", fmt: "num" }
+        { label: "Ceinture noire 1", header: "Programme Ceinture Noire Niveau 1", dir: "up", fmt: "num" },
+        { label: "Ceinture noire 2", header: "Programme Ceinture Noire Niveau 2", dir: "up", fmt: "num" },
+        // coquille dans le Sheet (« Progrmme ») : on cible le mot-clé
+        { label: "Leadership",       header: "Leadership",                        dir: "up", fmt: "num" },
+        { label: "Visite site web",   header: "Nouvelles visites sur le site",    dir: "up", fmt: "num" },
+        { label: "Nouveau follower",  header: "Nouveau follower All around",      dir: "up", fmt: "num" },
+        { label: "Nb follower total", header: "Nb follower Total",                dir: "up", fmt: "num" }
       ]
     ]
   }
