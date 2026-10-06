@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entonnoirs de vente — Bureau</title>
+<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="bureau.css?v=14">
+</head>
+<body class="is-bureau">
+
+<div class="bureau">
+
+  <header class="bu-head">
+    <div class="bu-head-left">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 4h18l-7 8v7l-4 2v-9z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Entonnoirs de vente</h1>
+        <div class="subtitle">One Fight Fitness &amp; Karaté Shinka-ryu</div>
+      </div>
+    </div>
+
+    <div class="bu-head-right">
+      <div class="week-pill">
+        <span class="k">28 derniers jours</span>
+        <span class="v" id="bureau-week">—</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="bu-cols">
+    <section class="bu-col">
+      <h2 class="bu-col-title">One Fight Fitness</h2>
+      <div class="funnel" id="funnel-fitness"></div>
+    </section>
+
+    <section class="bu-col">
+      <h2 class="bu-col-title">Karaté Shinka-ryu</h2>
+      <div class="funnel" id="funnel-karate"></div>
+    </section>
+  </main>
+
+  <footer class="bu-foot">
+    <div class="legend">
+      <span><i class="g"></i>Cible atteinte</span>
+      <span><i class="a"></i>Proche (80 %+)</span>
+      <span><i class="r"></i>Sous la cible</span>
+    </div>
+    <div class="sync">
+      <span class="dot" id="bureau-dot"></span>
+      <span id="bureau-sync">Connexion…</span>
+    </div>
+  </footer>
+
+</div>
+
+<script src="config.js?v=14" charset="utf-8"></script>
+<script src="app.js?v=14" charset="utf-8"></script>
+<script src="bureau.js?v=14" charset="utf-8"></script>
+<script>bootBureau();</script>
+</body>
+</html>

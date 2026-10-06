@@ -55,14 +55,31 @@ body::before {
   z-index: 0;
 }
 
+/* Le contenu ne s'étire pas d'un bord à l'autre de la télévision : il est
+   plafonné puis centré, avec des marges noires égales de chaque côté.
+   Sur un 50 pouces (1920 px) cela laisse environ 180 px de chaque côté et
+   resserre chaque tuile d'à peu près 20 %.                              */
 .shell {
   position: relative;
   z-index: 1;
   height: 100%;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  padding: clamp(16px, 1.9vw, 38px) clamp(18px, 2.2vw, 44px);
+  padding: clamp(16px, 1.9vw, 38px) clamp(18px, 1.6vw, 32px);
   gap: clamp(9px, 1.15vw, 22px);
+}
+
+/* au-delà de la largeur plafond, les polices calées en vw continueraient de
+   grossir alors que les tuiles, elles, ne bougent plus : on les fige. */
+@media (min-width: 1560px) {
+  .value      { font-size: 62px; }
+  .row > .card:first-child:nth-last-child(5) .value,
+  .row > .card:first-child:nth-last-child(5) ~ .card .value { font-size: 56px; }
+  .row > .card:first-child:nth-last-child(6) .value,
+  .row > .card:first-child:nth-last-child(6) ~ .card .value { font-size: 47px; }
 }
 
 /* ================= HEADER ================= */

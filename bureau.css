@@ -1,0 +1,214 @@
+/* ============================================================
+   Dashboard Bureau — entonnoirs de vente
+   Complète style.css (variables, police, palette)
+   ============================================================ */
+
+html, body.is-bureau {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+  cursor: auto;
+}
+
+.bureau {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2vw, 34px);
+  padding: clamp(20px, 2.4vw, 44px) clamp(20px, 1.8vw, 36px);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ---------------- en-tête ---------------- */
+.bu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.bu-head-left { display: flex; align-items: center; gap: clamp(13px, 1.3vw, 22px); }
+.bu-head h1 {
+  font-size: clamp(22px, 2.1vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+}
+.bu-head .subtitle { font-size: clamp(11px, 0.95vw, 17px); color: var(--grey-1); font-weight: 600; }
+.bu-head .mark { width: clamp(36px, 3vw, 54px); height: clamp(36px, 3vw, 54px); }
+
+/* ---------------- deux colonnes ---------------- */
+.bu-cols {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(18px, 2.2vw, 44px);
+  align-items: start;
+}
+
+.bu-col-title {
+  font-size: clamp(13px, 1.05vw, 19px);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: clamp(12px, 1.2vw, 20px);
+  padding-bottom: clamp(8px, 0.8vw, 14px);
+  border-bottom: 1px solid var(--border-hi);
+}
+
+.funnel { display: flex; flex-direction: column; }
+
+/* ---------------- une étape ---------------- */
+.step { display: flex; flex-direction: column; }
+
+.st-card {
+  position: relative;
+  background: linear-gradient(168deg, var(--surface-2) 0%, var(--surface) 100%);
+  border: 1px solid var(--border);
+  border-radius: clamp(14px, 1.2vw, 22px);
+  padding: clamp(14px, 1.35vw, 26px) clamp(16px, 1.5vw, 28px);
+  overflow: hidden;
+}
+.st-card::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: clamp(2px, 0.2vw, 4px);
+  background: var(--grey-3);
+}
+.st-card.ok::after    { background: var(--green); box-shadow: 0 0 18px rgba(48,209,88,0.45); }
+.st-card.close::after { background: var(--amber); box-shadow: 0 0 18px rgba(255,212,38,0.4); }
+.st-card.miss::after  { background: var(--red);   box-shadow: 0 0 18px var(--red-glow); }
+.st-card.empty { border-style: dashed; border-color: rgba(255,255,255,0.18); }
+
+.st-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.st-label {
+  font-size: clamp(10px, 0.85vw, 15px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.st-goal {
+  font-size: clamp(9px, 0.74vw, 13px);
+  font-weight: 700;
+  color: var(--grey-1);
+  white-space: nowrap;
+}
+
+.st-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin: clamp(4px, 0.5vw, 10px) 0 clamp(8px, 0.8vw, 14px);
+}
+.st-value {
+  font-size: clamp(34px, 3.6vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.012em;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+.st-value.empty { color: var(--grey-3); font-weight: 400; font-size: clamp(26px, 2.6vw, 46px); }
+
+.st-delta {
+  font-size: clamp(11px, 0.92vw, 17px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.st-delta.up   { color: var(--green); }
+.st-delta.down { color: var(--red-soft); }
+.st-delta.flat { color: var(--grey-2); }
+
+.st-bar {
+  height: clamp(4px, 0.42vw, 8px);
+  background: rgba(255,255,255,0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.st-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #8E0F14, var(--red));
+  transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.st-card.ok    .st-bar > i { background: linear-gradient(90deg, #1E9E43, var(--green)); }
+.st-card.close .st-bar > i { background: linear-gradient(90deg, #C9A200, var(--amber)); }
+
+/* ---------------- taux de conversion entre deux étapes ---------------- */
+.st-rate {
+  display: flex;
+  align-items: center;
+  gap: clamp(7px, 0.7vw, 12px);
+  padding: clamp(7px, 0.75vw, 13px) clamp(16px, 1.5vw, 28px);
+}
+.st-rate .arrow {
+  font-size: clamp(13px, 1.1vw, 19px);
+  color: var(--grey-3);
+  line-height: 1;
+}
+.st-rate .pc {
+  font-size: clamp(17px, 1.5vw, 27px);
+  font-weight: 800;
+  color: var(--white);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.st-rate .pc .unit { font-size: 0.6em; font-weight: 700; margin-left: 0.1em; }
+.st-rate .src {
+  font-size: clamp(9px, 0.76vw, 14px);
+  font-weight: 600;
+  color: var(--grey-1);
+  letter-spacing: 0.01em;
+}
+.st-rate.none .pc { color: var(--grey-3); }
+.st-rate .rate-goal {
+  margin-left: auto;
+  color: var(--grey-2);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* au-delà de 100 % : l'étape reçoit plus que celle d'avant */
+.st-rate.over .pc { color: var(--amber); }
+.st-rate.over .arrow { color: var(--amber); }
+
+.st-error {
+  background: rgba(232,35,42,0.1);
+  border: 1px solid rgba(232,35,42,0.35);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--red-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---------------- pied ---------------- */
+.bu-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: clamp(10px, 0.8vw, 15px);
+  color: var(--grey-1);
+  font-weight: 600;
+  padding-top: clamp(12px, 1.2vw, 20px);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------------- écrans étroits ---------------- */
+@media (max-width: 900px) {
+  .bu-cols { grid-template-columns: 1fr; gap: 30px; }
+}
