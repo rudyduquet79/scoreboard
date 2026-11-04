@@ -137,16 +137,24 @@ function fetchTab(gid) {
       reject(new Error("Le Google Sheet n'a pas répondu à temps."));
     }, 20000);
 
-    /* Pas de paramètre headers : il faut laisser Google détecter lui-même les
-       deux lignes d'en-tête du Sheet. Avec headers=0, Google type chaque
-       colonne d'après ses données — une colonne de chiffres devient
-       « numérique » et le texte de son en-tête est purement supprimé de la
-       réponse JSON. En le laissant détecter, les noms sont conservés dans
-       cols[].label, préfixés de leur section.                              */
+    /* headers=2 : on DIT à Google que les deux premières lignes du Sheet sont
+       l'en-tête (ligne 1 = section, ligne 2 = nom de la colonne). Il les
+       fusionne alors dans cols[].label, ce que lit tableToGrid().
+
+       Ne jamais mettre headers=0 : Google typerait chaque colonne d'après ses
+       données et le texte d'en-tête d'une colonne de chiffres disparaîtrait.
+
+       Ne jamais l'omettre non plus. Sans le paramètre, Google devine le nombre
+       de lignes d'en-tête, et cette devinette dépend du contenu de la cellule
+       A1. Le 2026-11-04 un « 10 » tapé dans A1 de l'onglet Fitness a fait
+       passer sa détection de 2 à 0 : plus aucun label, donc plus aucune
+       colonne reconnue, donc l'écran « Données indisponibles ». Le nombre
+       fixe met l'affichage à l'abri de ce qu'on écrit dans le coin du Sheet. */
     script.charset = "utf-8";
     script.src = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq"
                + "?tqx=out:json;responseHandler:" + cb
                + "&gid=" + encodeURIComponent(gid)
+               + "&headers=2"
                + "&_=" + Date.now();
     document.head.appendChild(script);
   });
